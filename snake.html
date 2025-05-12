@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, orientation=landscape" />
+  <title>Mother’s Day Snake Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffe6f0;
+      font-family: sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto;
+      height: 100vh;
+    }
+
+    #start-screen, #message-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffe6f0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    #start-screen h1,
+    #message {
+      font-size: 2em;
+      color: #e60073;
+      text-align: center;
+      margin: 0 20px;
+    }
+
+    .button {
+      margin-top: 20px;
+      font-size: 20px;
+      padding: 10px 20px;
+      background: #ff69b4;
+      border: none;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 20px;
+      position: relative;
+    }
+
+    canvas {
+      background: #fff0f5;
+      border: 3px solid #ff69b4;
+      margin-top: 10px;
+    }
+
+    #score {
+      position: absolute;
+      top: 5px;
+      right: 15px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff1493;
+      z-index: 5;
+      background: white;
+      padding: 4px 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+
+    #controls {
+      margin-top: 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 9;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 20px;
+    }
+
+    .btn {
+      background: #ff69b4;
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-size: 24px;
+      text-align: center;
+      user-select: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      min-width: 70px;
+    }
+  </style>
+</head>
+<body>
+  <div id="start-screen">
+    <h1>Hi Mom! Ready to play?</h1>
+    <button class="button" onclick="startGame()">Start Game</button>
+  </div>
+
+  <div id="game-container">
+    <div id="score">0 / 10</div>
+    <canvas id="game" width="400" height="400"></canvas>
+
+    <div id="controls">
+      <div class="btn" ontouchstart="setDirection('up')" onclick="setDirection('up')">↑</div>
+      <div class="btn-row">
+        <div class="btn" ontouchstart="setDirection('left')" onclick="setDirection('left')">←</div>
+        <div class="btn" ontouchstart="setDirection('right')" onclick="setDirection('right')">→</div>
+      </div>
+      <div class="btn" ontouchstart="setDirection('down')" onclick="setDirection('down')">↓</div>
+    </div>
+  </div>
+
+  <div id="message-screen" style="display:none;">
+    <div id="message"></div>
+    <button class="button" onclick="startGame()">Play Again</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const box = 20;
+    const rows = canvas.height / box;
+    const cols = canvas.width / box;
+    const goal = 10;
+
+    let snake, direction, food, score, game, gameOver = false;
+
+    function resetGame() {
+      snake = [{ x: 9 * box, y: 9 * box }];
+      direction = "right";
+      food = spawnFood();
+      score = 0;
+      gameOver = false;
+      document.getElementById("message-screen").style.display = "none";
+      updateScoreDisplay();
+    }
+
+    function updateScoreDisplay() {
+      document.getElementById("score").innerText = `${score} / ${goal}`;
+    }
+
+    function startGame() {
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("controls").style.display = "flex";
+      resetGame();
+      clearInterval(game);
+      game = setInterval(draw, 238); // 🐢 Slowed down again by ~20%
+    }
+
+    function spawnFood() {
+      const margin = 1;
+      const x = (Math.floor(Math.random() * (cols - margin * 2)) + margin) * box;
+      const y = (Math.floor(Math.random() * (rows - margin * 2)) + margin) * box;
+      return { x, y };
+    }
+
+    function setDirection(dir) {
+      if (gameOver) return;
+      if (
+        (dir === "left" && direction !== "right") ||
+        (dir === "right" && direction !== "left") ||
+        (dir === "up" && direction !== "down") ||
+        (dir === "down" && direction !== "up")
+      ) {
+        direction = dir;
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") setDirection("left");
+      if (e.key === "ArrowRight") setDirection("right");
+      if (e.key === "ArrowUp") setDirection("up");
+      if (e.key === "ArrowDown") setDirection("down");
+    });
+
+    function draw() {
+      ctx.fillStyle = "#fff0f5";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "#ff1493" : "#ffb6c1";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      ctx.font = "20px Arial";
+      ctx.fillText("❤️", food.x + 3, food.y + 17);
+
+      let head = { ...snake[0] };
+      if (direction === "left") head.x -= box;
+      if (direction === "right") head.x += box;
+      if (direction === "up") head.y -= box;
+      if (direction === "down") head.y += box;
+
+      if (
+        head.x < 0 ||
+        head.x >= canvas.width ||
+        head.y < 0 ||
+        head.y >= canvas.height ||
+        snake.some((s, i) => i > 0 && s.x === head.x && s.y === head.y)
+      ) {
+        gameOver = true;
+        showMessage("Game Over! 😢");
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        updateScoreDisplay();
+        if (score >= goal) {
+          gameOver = true;
+          showMessage("You Win! 💐 Happy Mother's Day 💖");
+          return;
+        }
+        food = spawnFood();
+      } else {
+        snake.pop();
+      }
+    }
+
+    function showMessage(text) {
+      clearInterval(game);
+      document.getElementById("message").innerText = text;
+      document.getElementById("message-screen").style.display = "flex";
+    }
+  </script>
+</body>
+</html>
